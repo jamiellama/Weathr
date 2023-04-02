@@ -7,12 +7,13 @@
 #include <Adafruit_SSD1306.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+#include <ESP8266HTTPClient.h>
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
-const char* ssid = "PiFi";
+const char* ssid = "BT-KCCP8G";
 const char* password = "Banana12";
 
 const long utcOffsetInSeconds = 3600;
@@ -29,18 +30,21 @@ float humidityRaw;
 float pressure;
 float pressureRaw;
 
-void setup() {
+void setup()
+{
   Serial.begin(9600);
   delay(10);
-  
+
   // Sensor Connectivity Check
-  if (!bme.begin(0x76)) {
+  if (!bme.begin(0x76))
+  {
     Serial.println("Cannot find BMP280");
     printSensorError();
     while (true);
   }
 
-  if (!oled.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+  if (!oled.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+  {
     Serial.println(F("Cannot find SSD1306"));
     printSensorError();
     while (true);
@@ -63,7 +67,8 @@ void setup() {
   Serial.print("Connecting to ");
   Serial.print(ssid); Serial.println(" ...");
 
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     Serial.print('.'); Serial.print(' ');
     printWifiConnect();
   }
@@ -75,10 +80,14 @@ void setup() {
 
 }
 
-void loop() {
-  if (WiFi.status() != WL_CONNECTED) {
+void loop()
+{
+  if (WiFi.status() != WL_CONNECTED)
+  {
     wifiReconnect();
-  } else {
+  }
+  else
+  {
     readBME();
 
     serialBME();
@@ -91,19 +100,31 @@ void loop() {
     delay(5000);
     printPressure();
     delay(5000);
+    printTime();
+    delay(5000);
+    printTemperature();
+    delay(5000);
+    printHumidity();
+    delay(5000);
+    printPressure();
+    delay(5000);
+
+    http();
   }
 
 }
 
 
-void wifiReconnect() {
+void wifiReconnect()
+{
   WiFi.disconnect();
   WiFi.begin(ssid, password);
   Serial.print("Reconnecting to ");
   Serial.print(ssid); Serial.println(" ...");
 
   int i = 0;
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     delay(1000);
     Serial.print(++i); Serial.print(' ');
   }
@@ -112,7 +133,30 @@ void wifiReconnect() {
   Serial.println("Success!");
 }
 
-void readBME() {
+void http()
+{
+  String posting;
+  String apiKey = "jpETCif5i45C5aDjBGiH";
+  HTTPClient http;
+
+  posting = "apiKey=" + apiKey + "&outdoorTemp=" + String(temperature) + "&outdoorHumid=" + String(humidity) + "&outdoorPress=" + String(pressure) ;
+  
+  http.begin("http://weathr.jamielarkin.co.uk/services/post_data.php");
+
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+  int response = http.POST(posting);
+  String payload = http.getString();
+
+  Serial.println(posting);
+  Serial.println(response);
+  Serial.println(payload);
+
+  http.end();
+}
+
+void readBME()
+{
   temperature = bme.readTemperature();
   humidityRaw = bme.readHumidity();
   pressureRaw = (bme.readPressure() / 100.0F);
@@ -121,7 +165,8 @@ void readBME() {
   pressure = round(pressureRaw);
 }
 
-void serialBME() {
+void serialBME()
+{
   timeClient.update();
   Serial.println('\n');
 
@@ -142,7 +187,8 @@ void serialBME() {
   Serial.println("hPa");
 }
 
-void printSensorError() {
+void printSensorError()
+{
   oled.clearDisplay();
   oled.setTextSize(2);
   oled.setTextColor(WHITE);
@@ -155,7 +201,8 @@ void printSensorError() {
   oled.display();
 }
 
-void printWifiConnect() {
+void printWifiConnect()
+{
   oled.clearDisplay();
   oled.setTextSize(2);
   oled.setTextColor(WHITE);
@@ -189,7 +236,8 @@ void printWifiConnect() {
   delay(1000);
 }
 
-void printTemperature() {
+void printTemperature()
+{
   oled.clearDisplay();
   oled.setTextSize(2);
   oled.setTextColor(WHITE);
@@ -205,7 +253,8 @@ void printTemperature() {
   oled.display();
 }
 
-void printHumidity() {
+void printHumidity()
+{
   oled.clearDisplay();
   oled.setTextSize(2);
   oled.setTextColor(WHITE);
@@ -221,7 +270,8 @@ void printHumidity() {
   oled.display();
 }
 
-void printPressure() {
+void printPressure()
+{
   oled.clearDisplay();
   oled.setTextSize(2);
   oled.setTextColor(WHITE);
@@ -237,7 +287,8 @@ void printPressure() {
   oled.display();
 }
 
-void printTime() {
+void printTime()
+{
   oled.clearDisplay();
   oled.setTextSize(3);
   oled.setTextColor(WHITE);
